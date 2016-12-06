@@ -1,0 +1,191 @@
+<div  class="col-md-6 col-xs-12" style=" border-width: 0px;">
+
+<div id="chart" style=""></div>
+
+</div>
+
+
+<style>
+
+rect {
+        stroke: #E6E6E6;
+        stroke-width: 0px;
+      }
+
+.axis text {
+  font-size: 1.3em;
+  font-family: Consolas, courier;
+  fill: #000;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: none;
+}
+
+.d3-tip {
+  line-height: 1;
+  font: 14px sans-serif;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: rgb(185, 185, 185);
+  border-radius: 2px;
+}
+
+/* Creates a small triangle extender for the tooltip */
+.d3-tip:after {
+  box-sizing: border-box;
+  display: inline;
+  font-size: 10px;
+  width: 100%;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.8);
+  content: "\25BC";
+  position: absolute;
+  text-align: center;
+}
+
+/* Style northward tooltips differently */
+.d3-tip.n:after {
+  margin: -1px 0 0 0;
+  top: 100%;
+  left: 0;
+}
+
+#chart {
+  width: 100%;
+  height: 1000px;
+  position:absolute;
+  
+}                         
+
+</style>
+
+<script type="text/javascript">
+
+	var $container = $('#chart'),
+			width = $container.width(),
+			height = $container.width(),
+			color = d3.scale.category20c();
+	
+	
+	$('#chart').height($container.width())		
+	
+	$( window ).resize(function() {
+		$('#chart').height($container.width())	
+	});
+
+    var margin = { top: 100, right: 100, bottom: 0, left: 0 },
+        dim = Math.min(parseInt(d3.select("#chart").style("width")), parseInt(d3.select("#chart").style("height")))
+        width = width - margin.right,
+        height = height - margin.top,
+        categories = 17,
+        gridSize = (width) / categories,
+		
+	console.log(height)	
+	
+	
+
+    var xScale = d3.scale.ordinal().rangeBands([0, width]);
+    var yScale = d3.scale.ordinal().rangeBands([0, height]);
+    var xAxis = d3.svg.axis().orient("top");
+    var yAxis = d3.svg.axis().orient("right");
+
+    // Create the svg canvas
+    var svg = d3.select("#chart").append("svg")
+        .attr("width", '100%')
+        .attr("height", '100%')
+		.attr('viewBox','0 0 '+ (Math.max(width,height)+margin.right) +' '+(Math.max(width,height)+margin.right) )
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var tip = d3.tip()
+        .attr('class', 'd3-tip')
+        .offset([-10, 0])
+        .html(function(d) {
+          return  "<div><span>Relationship:</span> <span style='color:white'>" + d.axis2 + " and " + d.axis1 + "</span></div>" +
+                  "<div><span>Correlation:</span> <span style='color:white'>" + d3.round(d.value, 3) + "</span></div>";
+        })
+
+
+    svg.call(tip);
+
+d3.csv("correlationCoefficients.csv", format, function(error, data){
+
+  data.forEach(function(d){
+    d.x=d.axis1;
+    d.y=d.axis2;
+    d.value=+d.value;
+  });
+  
+    console.log(data);
+
+  var color = d3.scale.sqrt().range(["steelblue", "crimson"]);
+
+  var domain1 = d3.set(data.map(function(d) {
+          return d.x
+        })).values()
+  var domain2 = d3.set(data.map(function(d) {
+          return d.y
+        })).values()
+
+
+  // Create the heatmap visualization
+  var viz = svg.selectAll(".correlation")
+              .data(data)
+              .enter().append("rect")
+                  .attr("class", "correlation")
+                  .attr("x", function(d, i) {return gridSize * Math.floor(i/ categories) ; })
+                  .attr("y", function(d, i) {return gridSize * (i % categories) ; })
+                  .attr("width",gridSize)
+                  .attr("height", gridSize)
+					  .style("fill", function(d){
+                    var ypos = domain2.indexOf(d.y);
+                    var xpos = domain1.indexOf(d.x);
+                    return color(d.value);
+                  })
+                  .on('mouseover', tip.show)
+                  .on('mouseout', tip.hide);
+
+    var names = [];
+    data.slice(0, categories).forEach(function(d){
+      names.push(d.axis2);
+    });
+
+    // Add the horizontal labels
+    xScale.domain(names);
+
+    xAxis.scale(xScale);
+
+    svg.append("g")
+          .attr("class", "x axis")
+          .call(xAxis)
+          .selectAll("text")
+              .attr("y", -10)
+              .attr("dy", ".5em")
+              .attr("x", 0)
+              .attr("transform", "rotate(-45)")
+              .style("text-anchor", "start")
+              .style("font-weight", "bold");
+
+    // Add the vertical labels
+    yScale.domain(names);
+
+    yAxis.scale(yScale);
+
+    svg.append("g")
+          .attr("class", "y axis")
+          .attr("transform","translate("+width+",0)")
+          .call(yAxis)
+          //.selectAll("text")
+          //.style("text-anchor", "end");
+    
+});
+
+function format(d) {
+  d.value = +d.value;
+  return d;
+}
+
+</script>
